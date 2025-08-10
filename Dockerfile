@@ -1,43 +1,34 @@
-# Signal Moderation Bot - Working Solution
 FROM python:3.11-slim
+
+WORKDIR /app
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
-    curl \
-        wget \
-            openjdk-17-jre-headless \
-                && rm -rf /var/lib/apt/lists/*
+    sqlite3 \
+        curl \
+            && rm -rf /var/lib/apt/lists/*
 
-                # Set up Python environment
-                WORKDIR /app
-                COPY requirements.txt .
-                RUN pip install --no-cache-dir -r requirements.txt
+            # Copy requirements and install Python dependencies
+            COPY requirements.txt .
+            RUN pip install --no-cache-dir -r requirements.txt
 
-                # Copy application files
-                COPY app.py .
-                COPY signal_service.py .
-                COPY templates/ ./templates/
+            # Copy application files
+            COPY signal_service.py .
+            COPY app.py .
+            COPY templates/ templates/
 
-                # Copy working signal-cli data
-                COPY signal-cli-data/ /home/.local/share/signal-cli/
+            # Copy signal-cli data
+            COPY signal-cli-data/ /home/.local/share/signal-cli/
 
-                # Set proper permissions
-                RUN chmod -R 755 /home/.local/share/signal-cli
+            # Create logs directory
+            RUN mkdir -p /app/logs
 
-                # Install signal-cli-rest-api using working JAR file
-                RUN wget -O /tmp/signal-cli-rest-api.jar \
-                    https://github.com/bbernhard/signal-cli-rest-api/releases/download/0.94/signal-cli-rest-api-0.94-fat.jar
+            # Expose port
+            EXPOSE 5000
 
-                    # Copy startup script
-                    COPY start.sh .
-                    RUN chmod +x start.sh
+            # Health check
+            HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+                CMD curl -f http://localhost:5000/health || exit 1
 
-                    # Expose ports
-                    EXPOSE 5000 8080
-
-                    # Set environment variables
-                    ENV SIGNAL_CLI_CONFIG_DIR=/home/.local/share/signal-cli
-                    ENV PORT=5000
-
-                    # Start the application
-                    CMD ["./start.sh"]
+                # Run the application
+                CMD ["python", "app.py"]
