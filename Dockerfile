@@ -13,7 +13,7 @@ RUN apt-get update && apt-get install -y \
 
                         # Download signal-cli (not the REST API wrapper, but the actual signal-cli)
                         RUN wget -O /tmp/signal-cli.tar.gz \
-                            https://github.com/AsamK/signal-cli/releases/download/v0.13.18/signal-cli-0.13.18-Linux.tar.gz && \
+                            https://github.com/AsamK/signal-cli/releases/download/v0.13.18/signal-cli-0.13.18-Linux-native.tar.gz && \
                                 tar -xzf /tmp/signal-cli.tar.gz -C /opt && \
                                     mv /opt/signal-cli-* /opt/signal-cli && \
                                         rm /tmp/signal-cli.tar.gz
