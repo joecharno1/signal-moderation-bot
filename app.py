@@ -71,7 +71,7 @@ class SignalBotService:
             # Query to get recipients (contacts) from signal-cli database
             # Signal-CLI stores contacts in the recipient table
             query = """
-            SELECT DISTINCT
+            SELECT 
                 _id,
                 aci,
                 number,
@@ -81,8 +81,8 @@ class SignalBotService:
                 family_name,
                 username
             FROM recipient 
-            WHERE number IS NOT NULL
-            AND number != ?
+            WHERE (number IS NOT NULL OR aci IS NOT NULL)
+            AND (number != ? OR number IS NULL)
             """
             
             cursor.execute(query, (self.phone_number,))
@@ -256,15 +256,45 @@ def get_groups():
 
 @app.route('/api/send-message', methods=['POST'])
 def send_message():
-    """Send message to group (simulated)"""
+    """Send message to group"""
     try:
         data = request.get_json()
         message = data.get('message', '')
         
-        # Simulate sending message
-        logger.info(f"Would send message to group: {message}")
-        return jsonify({"success": True, "message": "Message sent successfully (simulated)"})
+        if not message.strip():
+            return jsonify({"success": False, "error": "Message cannot be empty"}), 400
+        
+        # Actually send message using signal-cli
+        import subprocess
+        import os
+        
+        # Path to signal-cli data
+        signal_data_path = "/home/.local/share/signal-cli"
+        
+        # Send message to group using signal-cli
+        cmd = [
+            "signal-cli",
+            "--config", signal_data_path,
+            "-a", signal_service.phone_number,
+            "send",
+            "-g", signal_service.group_id,
+            "-m", message
+        ]
+        
+        logger.info(f"Sending message to group: {message}")
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+        
+        if result.returncode == 0:
+            logger.info(f"Message sent successfully: {message}")
+            return jsonify({"success": True, "message": "Message sent successfully"})
+        else:
+            logger.error(f"Failed to send message: {result.stderr}")
+            return jsonify({"success": False, "error": f"Failed to send message: {result.stderr}"}), 500
+            
+    except subprocess.TimeoutExpired:
+        return jsonify({"success": False, "error": "Message sending timed out"}), 500
     except Exception as e:
+        logger.error(f"Error sending message: {str(e)}")
         return jsonify({"success": False, "error": str(e)}), 500
 
 @app.route('/api/sync-profiles', methods=['POST'])
