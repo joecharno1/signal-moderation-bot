@@ -68,59 +68,58 @@ class SignalBotService:
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
             
-            # Query to get group members with profile information
+            # Query to get recipients (contacts) from signal-cli database
+            # Signal-CLI stores contacts in the recipient table
             query = """
             SELECT DISTINCT
-                gm.recipient_id,
-                r.uuid,
-                r.phone,
-                r.profile_given_name,
-                r.profile_family_name,
-                r.profile_joined_name,
-                r.username,
-                gm.role
-            FROM group_members gm
-            LEFT JOIN recipient r ON gm.recipient_id = r._id
-            WHERE gm.group_id = (
-                SELECT _id FROM groups 
-                WHERE group_id = ? 
-                LIMIT 1
-            )
+                _id,
+                aci,
+                number,
+                profile_given_name,
+                profile_family_name,
+                given_name,
+                family_name,
+                username
+            FROM recipient 
+            WHERE number IS NOT NULL
+            AND number != ?
             """
             
-            cursor.execute(query, (self.group_id,))
+            cursor.execute(query, (self.phone_number,))
             rows = cursor.fetchall()
             
             members = []
             for row in rows:
-                recipient_id, uuid, phone, given_name, family_name, joined_name, username, role = row
+                recipient_id, aci, number, profile_given_name, profile_family_name, given_name, family_name, username = row
                 
-                # Build display name
+                # Build display name from available name fields
                 display_name = "Unknown"
-                if joined_name:
-                    display_name = joined_name
+                if profile_given_name and profile_family_name:
+                    display_name = f"{profile_given_name} {profile_family_name}"
+                elif profile_given_name:
+                    display_name = profile_given_name
                 elif given_name and family_name:
                     display_name = f"{given_name} {family_name}"
                 elif given_name:
                     display_name = given_name
                 elif username:
                     display_name = username
-                elif phone:
-                    display_name = phone
+                elif number:
+                    display_name = number
                 
                 member = {
                     "id": recipient_id,
-                    "uuid": uuid,
-                    "phone": phone,
+                    "uuid": aci,  # Signal-CLI uses 'aci' field for UUID
+                    "phone": number,
                     "name": display_name,
                     "display_name": display_name,
-                    "given_name": given_name,
-                    "family_name": family_name,
+                    "given_name": given_name or profile_given_name,
+                    "family_name": family_name or profile_family_name,
                     "username": username,
-                    "role": role,
-                    "has_profile": bool(given_name or family_name or joined_name),
-                    "has_phone": bool(phone),
-                    "member_type": "phone" if phone else "uuid"
+                    "role": "member",  # Signal-CLI doesn't store roles in recipient table
+                    "has_profile": bool(profile_given_name or profile_family_name or given_name or family_name),
+                    "has_phone": bool(number),
+                    "member_type": "phone" if number else "uuid"
                 }
                 members.append(member)
             
