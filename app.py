@@ -26,7 +26,7 @@ class SignalBotService:
         
         # Signal-CLI data paths
         self.signal_data_dir = "/home/.local/share/signal-cli"
-        self.account_dir = f"{self.signal_data_dir}/data/{self.phone_number}.d"
+        self.account_dir = f"{self.signal_data_dir}/data/271089.d"
         self.db_path = f"{self.account_dir}/account.db"
         self.accounts_json = f"{self.signal_data_dir}/data/accounts.json"
         
