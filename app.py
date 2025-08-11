@@ -256,7 +256,7 @@ def get_groups():
 
 @app.route('/api/send-message', methods=['POST'])
 def send_message():
-    """Send message to group (simulated for now)"""
+    """Send message to group using signal-cli-rest-api"""
     try:
         data = request.get_json()
         message = data.get('message', '')
@@ -264,9 +264,38 @@ def send_message():
         if not message.strip():
             return jsonify({"success": False, "error": "Message cannot be empty"}), 400
         
-        # Simulate sending message for now (signal-cli not available in container)
-        logger.info(f"Would send message to group: {message}")
-        return jsonify({"success": True, "message": "Message sent successfully (simulated - signal-cli not available)"})
+        # Send message using signal-cli-rest-api (like local Docker setup)
+        import requests
+        
+        # Use the same configuration as local Docker setup
+        api_url = 'http://localhost:8080'  # signal-cli-rest-api service
+        phone_number = "+15614121835"
+        group_id = "group.MWdCWUZWeG5vWDI2L0c4OVhNaXQ3VHZOKzFwZTZJbjZDaGp3bW5ldm1GTT0="
+        
+        # Send message to group via REST API
+        payload = {
+            "message": message,
+            "recipients": [group_id]
+        }
+        
+        logger.info(f"Sending message to group via signal-cli-rest-api: {message}")
+        response = requests.post(
+            f"{api_url}/v2/send",
+            json=payload,
+            headers={"Content-Type": "application/json"},
+            timeout=30
+        )
+        
+        if response.status_code == 201:
+            logger.info(f"Message sent successfully: {message}")
+            return jsonify({"success": True, "message": "Message sent successfully"})
+        else:
+            logger.error(f"Failed to send message: {response.status_code} - {response.text}")
+            return jsonify({"success": False, "error": f"Failed to send message: {response.text}"}), 500
+            
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Error connecting to signal-cli-rest-api: {str(e)}")
+        return jsonify({"success": False, "error": f"Signal service unavailable: {str(e)}"}), 500
     except Exception as e:
         logger.error(f"Error sending message: {str(e)}")
         return jsonify({"success": False, "error": str(e)}), 500
