@@ -2,22 +2,11 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install system dependencies including Java for signal-cli
+# Install system dependencies
 RUN apt-get update && apt-get install -y \
     sqlite3 \
     curl \
-    wget \
-    openjdk-17-jre-headless \
     && rm -rf /var/lib/apt/lists/*
-
-# Download and install signal-cli
-RUN wget -O /tmp/signal-cli.tar.gz \
-    https://github.com/AsamK/signal-cli/releases/download/v0.13.18/signal-cli-0.13.18-Linux-native.tar.gz && \
-    tar -xzf /tmp/signal-cli.tar.gz -C /opt/ && \
-    ls -la /opt/ && \
-    mv /opt/signal-cli-* /opt/signal-cli || mv /opt/signal-cli /opt/signal-cli || true && \
-    ln -s /opt/signal-cli/bin/signal-cli /usr/local/bin/signal-cli && \
-    rm /tmp/signal-cli.tar.gz
 
 # Copy requirements and install Python dependencies
 COPY requirements.txt .
