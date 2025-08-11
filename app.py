@@ -108,7 +108,7 @@ class SignalBotService:
                     display_name = number
                 
                 member = {
-                    "id": recipient_id,
+                    "id": str(recipient_id),  # Convert to string for frontend compatibility
                     "uuid": aci,  # Signal-CLI uses 'aci' field for UUID
                     "phone": number,
                     "name": display_name,
